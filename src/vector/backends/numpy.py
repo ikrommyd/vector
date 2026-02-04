@@ -2160,7 +2160,6 @@ def array(*args: typing.Any, **kwargs: typing.Any) -> VectorNumpy:
 
     is_momentum = any(x in _repr_momentum_to_generic for x in names)
 
-    # Validate coordinates using dimension-guard pattern (same as awkward _check_names)
     _validate_coordinates(names)
 
     if any(x in ("t", "E", "e", "energy", "tau", "M", "m", "mass") for x in names):
