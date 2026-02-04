@@ -422,7 +422,7 @@ def test_conflicting_energy_mass_zip():
 
 def test_conflicting_energy_mass_sympy():
     """MomentumSympy4D should reject energy + mass (t-like + tau-like)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
+    with pytest.raises(TypeError, match="duplicate coordinates"):
         vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, energy=_energy, mass=_mass)
 
 
@@ -534,7 +534,7 @@ def test_conflicting_E_mass_zip():
 
 def test_conflicting_E_mass_sympy():
     """MomentumSympy4D should reject E + mass"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
+    with pytest.raises(TypeError, match="duplicate coordinates"):
         vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, E=_E, mass=_mass)
 
 
@@ -590,7 +590,7 @@ def test_conflicting_t_mass_zip():
 
 def test_conflicting_t_mass_sympy():
     """MomentumSympy4D should reject t + mass"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
+    with pytest.raises(TypeError, match="duplicate coordinates"):
         vector.MomentumSympy4D(x=_x, y=_y, z=_z, t=_t, mass=_mass)
 
 
@@ -646,7 +646,7 @@ def test_conflicting_energy_tau_zip():
 
 def test_conflicting_energy_tau_sympy():
     """MomentumSympy4D should reject energy + tau"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
+    with pytest.raises(TypeError, match="duplicate coordinates"):
         vector.MomentumSympy4D(x=_x, y=_y, z=_z, energy=_energy, tau=_tau)
 
 
@@ -708,7 +708,7 @@ def test_duplicate_px_x_zip():
 
 def test_duplicate_px_x_sympy():
     """MomentumSympy4D should reject px + x"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
+    with pytest.raises(TypeError, match="unrecognized combination"):
         vector.MomentumSympy4D(px=_px, x=_x, y=_y, z=_z, t=_t)
 
 
@@ -764,7 +764,7 @@ def test_duplicate_py_y_zip():
 
 def test_duplicate_py_y_sympy():
     """MomentumSympy4D should reject py + y"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
+    with pytest.raises(TypeError, match="unrecognized combination"):
         vector.MomentumSympy4D(x=_x, py=_py, y=_y, z=_z, t=_t)
 
 
@@ -1452,7 +1452,7 @@ def test_mass_without_longitudinal_zip():
 
 def test_mass_without_longitudinal_sympy():
     """MomentumSympy4D should reject pt+phi+mass (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
+    with pytest.raises(TypeError, match="duplicate coordinates"):
         vector.MomentumSympy4D(pt=_pt, phi=_phi, mass=_mass)
 
 
