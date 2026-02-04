@@ -11,8 +11,19 @@ import pytest
 import vector
 
 ak = pytest.importorskip("awkward")
+sympy = pytest.importorskip("sympy")
 
-pytestmark = pytest.mark.awkward
+pytestmark = [pytest.mark.awkward, pytest.mark.sympy]
+
+# Define sympy symbols for tests
+_x, _y = sympy.symbols("x y")
+_rho, _phi = sympy.symbols("rho phi")
+_z, _eta, _theta = sympy.symbols("z eta theta")
+_t, _tau = sympy.symbols("t tau")
+_px, _py = sympy.symbols("px py")
+_pt = sympy.symbols("pt")
+_pz = sympy.symbols("pz")
+_M, _m, _mass, _E, _e, _energy = sympy.symbols("M m mass E e energy")
 
 
 # ============================================================================
@@ -73,6 +84,12 @@ def test_duplicate_E_e_zip():
         )
 
 
+def test_duplicate_E_e_sympy():
+    """MomentumSympy4D should reject E + e"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, E=_E, e=_e)
+
+
 def test_duplicate_E_energy_object():
     """vector.obj should reject E + energy"""
     with pytest.raises(TypeError, match="unrecognized combination"):
@@ -121,6 +138,12 @@ def test_duplicate_E_energy_zip():
                 "energy": np.array([5.0, 6.0]),
             }
         )
+
+
+def test_duplicate_E_energy_sympy():
+    """MomentumSympy4D should reject E + energy"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, E=_E, energy=_energy)
 
 
 def test_duplicate_e_energy_object():
@@ -173,6 +196,12 @@ def test_duplicate_e_energy_zip():
         )
 
 
+def test_duplicate_e_energy_sympy():
+    """MomentumSympy4D should reject e + energy"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, e=_e, energy=_energy)
+
+
 def test_duplicate_M_m_object():
     """vector.obj should reject M + m"""
     with pytest.raises(TypeError, match="unrecognized combination"):
@@ -221,6 +250,12 @@ def test_duplicate_M_m_zip():
                 "m": np.array([0.5, 0.5]),
             }
         )
+
+
+def test_duplicate_M_m_sympy():
+    """MomentumSympy4D should reject M + m"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, M=_M, m=_m)
 
 
 def test_duplicate_M_mass_object():
@@ -273,6 +308,12 @@ def test_duplicate_M_mass_zip():
         )
 
 
+def test_duplicate_M_mass_sympy():
+    """MomentumSympy4D should reject M + mass"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, M=_M, mass=_mass)
+
+
 def test_duplicate_m_mass_object():
     """vector.obj should reject m + mass"""
     with pytest.raises(TypeError, match="unrecognized combination"):
@@ -321,6 +362,12 @@ def test_duplicate_m_mass_zip():
                 "mass": np.array([0.5, 0.5]),
             }
         )
+
+
+def test_duplicate_m_mass_sympy():
+    """MomentumSympy4D should reject m + mass"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, m=_m, mass=_mass)
 
 
 def test_conflicting_energy_mass_object():
@@ -373,6 +420,12 @@ def test_conflicting_energy_mass_zip():
         )
 
 
+def test_conflicting_energy_mass_sympy():
+    """MomentumSympy4D should reject energy + mass (t-like + tau-like)"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, energy=_energy, mass=_mass)
+
+
 def test_conflicting_t_tau_object():
     """vector.obj should reject t + tau"""
     with pytest.raises(TypeError, match="specify t= or tau="):
@@ -421,6 +474,12 @@ def test_conflicting_t_tau_zip():
                 "tau": np.array([0.5, 0.5]),
             }
         )
+
+
+def test_conflicting_t_tau_sympy():
+    """VectorSympy4D should reject t + tau"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.VectorSympy4D(x=_x, y=_y, z=_z, t=_t, tau=_tau)
 
 
 def test_conflicting_E_mass_object():
@@ -473,6 +532,12 @@ def test_conflicting_E_mass_zip():
         )
 
 
+def test_conflicting_E_mass_sympy():
+    """MomentumSympy4D should reject E + mass"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, E=_E, mass=_mass)
+
+
 def test_conflicting_t_mass_object():
     """vector.obj should reject t + mass"""
     with pytest.raises(TypeError, match="specify t= or tau=, but not more than one"):
@@ -523,6 +588,12 @@ def test_conflicting_t_mass_zip():
         )
 
 
+def test_conflicting_t_mass_sympy():
+    """MomentumSympy4D should reject t + mass"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.MomentumSympy4D(x=_x, y=_y, z=_z, t=_t, mass=_mass)
+
+
 def test_conflicting_energy_tau_object():
     """vector.obj should reject energy + tau"""
     with pytest.raises(TypeError, match="specify t= or tau=, but not more than one"):
@@ -571,6 +642,12 @@ def test_conflicting_energy_tau_zip():
                 "tau": np.array([0.5, 0.5]),
             }
         )
+
+
+def test_conflicting_energy_tau_sympy():
+    """MomentumSympy4D should reject energy + tau"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.MomentumSympy4D(x=_x, y=_y, z=_z, energy=_energy, tau=_tau)
 
 
 # ============================================================================
@@ -629,6 +706,12 @@ def test_duplicate_px_x_zip():
         )
 
 
+def test_duplicate_px_x_sympy():
+    """MomentumSympy4D should reject px + x"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(px=_px, x=_x, y=_y, z=_z, t=_t)
+
+
 def test_duplicate_py_y_object():
     """vector.obj should reject py + y"""
     with pytest.raises(TypeError, match="duplicate coordinates"):
@@ -679,6 +762,12 @@ def test_duplicate_py_y_zip():
         )
 
 
+def test_duplicate_py_y_sympy():
+    """MomentumSympy4D should reject py + y"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(x=_x, py=_py, y=_y, z=_z, t=_t)
+
+
 def test_duplicate_pt_rho_object():
     """vector.obj should reject pt + rho"""
     with pytest.raises(TypeError, match="duplicate coordinates"):
@@ -727,6 +816,12 @@ def test_duplicate_pt_rho_zip():
                 "mass": np.array([0.5, 0.5]),
             }
         )
+
+
+def test_duplicate_pt_rho_sympy():
+    """MomentumSympy4D should reject pt + rho"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(pt=_pt, rho=_rho, phi=_phi, eta=_eta, mass=_mass)
 
 
 # ============================================================================
@@ -783,6 +878,12 @@ def test_duplicate_pz_z_zip():
                 "t": np.array([5.0, 6.0]),
             }
         )
+
+
+def test_duplicate_pz_z_sympy():
+    """MomentumSympy4D should reject pz + z"""
+    with pytest.raises(TypeError, match="duplicate coordinates"):
+        vector.MomentumSympy4D(x=_x, y=_y, pz=_pz, z=_z, t=_t)
 
 
 # ============================================================================
@@ -901,6 +1002,15 @@ def test_valid_pt_phi_eta_mass_zip():
     assert ak.all(arr.mass == ak.Array([0.5, 0.5]))
 
 
+def test_valid_pt_phi_eta_mass_sympy():
+    """MomentumSympy4D should accept pt, phi, eta, mass"""
+    vec = vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, mass=_mass)
+    assert vec.pt == _pt
+    assert vec.phi == _phi
+    assert vec.eta == _eta
+    assert vec.mass == _mass
+
+
 def test_valid_x_y_z_energy_object():
     """vector.obj should accept x, y, z, energy"""
     vec = vector.obj(x=1.0, y=2.0, z=3.0, energy=5.0)
@@ -958,6 +1068,15 @@ def test_valid_x_y_z_energy_zip():
     assert ak.all(arr.y == ak.Array([2.0, 3.0]))
     assert ak.all(arr.z == ak.Array([3.0, 4.0]))
     assert ak.all(arr.energy == ak.Array([5.0, 6.0]))
+
+
+def test_valid_x_y_z_energy_sympy():
+    """MomentumSympy4D should accept x, y, z, energy"""
+    vec = vector.MomentumSympy4D(x=_x, y=_y, z=_z, energy=_energy)
+    assert vec.x == _x
+    assert vec.y == _y
+    assert vec.z == _z
+    assert vec.energy == _energy
 
 
 def test_valid_px_py_pz_E_object():
@@ -1019,6 +1138,15 @@ def test_valid_px_py_pz_E_zip():
     assert ak.all(ak.Array([5.0, 6.0]) == arr.E)
 
 
+def test_valid_px_py_pz_E_sympy():
+    """MomentumSympy4D should accept px, py, pz, E"""
+    vec = vector.MomentumSympy4D(px=_px, py=_py, pz=_pz, E=_E)
+    assert vec.px == _px
+    assert vec.py == _py
+    assert vec.pz == _pz
+    assert vec.E == _E
+
+
 # ============================================================================
 # Incomplete azimuthal coordinate pairs
 # ============================================================================
@@ -1065,6 +1193,12 @@ def test_incomplete_x_without_y_zip():
         )
 
 
+def test_incomplete_x_without_y_sympy():
+    """VectorSympy3D should reject x without y"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.VectorSympy3D(x=_x, z=_z)
+
+
 def test_incomplete_rho_without_phi_object():
     """vector.obj should reject rho without phi"""
     with pytest.raises(TypeError, match="unrecognized combination"):
@@ -1104,6 +1238,12 @@ def test_incomplete_rho_without_phi_zip():
                 "z": np.array([3.0, 4.0]),
             }
         )
+
+
+def test_incomplete_rho_without_phi_sympy():
+    """VectorSympy3D should reject rho without phi"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.VectorSympy3D(rho=_rho, z=_z)
 
 
 # ============================================================================
@@ -1155,6 +1295,12 @@ def test_mixed_x_phi_zip():
         )
 
 
+def test_mixed_x_phi_sympy():
+    """VectorSympy3D should reject x with phi (mixed systems)"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.VectorSympy3D(x=_x, phi=_phi, z=_z)
+
+
 def test_mixed_y_rho_object():
     """vector.obj should reject y with rho (mixed systems)"""
     with pytest.raises(TypeError, match="unrecognized combination"):
@@ -1197,6 +1343,12 @@ def test_mixed_y_rho_zip():
                 "z": np.array([3.0, 4.0]),
             }
         )
+
+
+def test_mixed_y_rho_sympy():
+    """VectorSympy3D should reject y with rho (mixed systems)"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.VectorSympy3D(y=_y, rho=_rho, z=_z)
 
 
 # ============================================================================
@@ -1248,6 +1400,12 @@ def test_temporal_without_longitudinal_zip():
         )
 
 
+def test_temporal_without_longitudinal_sympy():
+    """VectorSympy4D should reject x+y+t (temporal without longitudinal)"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.VectorSympy4D(x=_x, y=_y, t=_t)
+
+
 def test_mass_without_longitudinal_object():
     """vector.obj should reject pt+phi+mass (temporal without longitudinal)"""
     with pytest.raises(TypeError, match="unrecognized combination"):
@@ -1290,6 +1448,12 @@ def test_mass_without_longitudinal_zip():
                 "mass": np.array([0.5, 0.5]),
             }
         )
+
+
+def test_mass_without_longitudinal_sympy():
+    """MomentumSympy4D should reject pt+phi+mass (temporal without longitudinal)"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.MomentumSympy4D(pt=_pt, phi=_phi, mass=_mass)
 
 
 # ============================================================================
@@ -1335,6 +1499,12 @@ def test_only_temporal_zip():
         )
 
 
+def test_only_temporal_sympy():
+    """VectorSympy4D should reject only t (missing spatial coords)"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.VectorSympy4D(t=_t)
+
+
 def test_only_longitudinal_object():
     """vector.obj should reject only z (missing azimuthal coords)"""
     with pytest.raises(TypeError, match="unrecognized combination"):
@@ -1371,6 +1541,12 @@ def test_only_longitudinal_zip():
                 "z": np.array([3.0, 4.0]),
             }
         )
+
+
+def test_only_longitudinal_sympy():
+    """VectorSympy3D should reject only z (missing azimuthal coords)"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.VectorSympy3D(z=_z)
 
 
 def test_longitudinal_temporal_without_azimuthal_object():
@@ -1412,3 +1588,9 @@ def test_longitudinal_temporal_without_azimuthal_zip():
                 "t": np.array([5.0, 6.0]),
             }
         )
+
+
+def test_longitudinal_temporal_without_azimuthal_sympy():
+    """VectorSympy4D should reject z+t without azimuthal coords"""
+    with pytest.raises(TypeError, match="unrecognized combination"):
+        vector.VectorSympy4D(z=_z, t=_t)

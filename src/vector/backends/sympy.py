@@ -437,6 +437,23 @@ def _replace_data(obj: typing.Any, result: typing.Any) -> typing.Any:
     return obj
 
 
+def _validate_sympy_coordinates(coordinates: dict[str, typing.Any]) -> None:
+    """
+    Validate coordinate names for duplicate/conflicting coordinates.
+
+    Checks that no two coordinate names map to the same generic coordinate
+    (e.g., E and e both map to t, so having both is invalid).
+
+    Raises TypeError if duplicate or conflicting coordinates are detected.
+    """
+    generic_keys = [_repr_momentum_to_generic.get(k, k) for k in coordinates]
+    if len(generic_keys) != len(set(generic_keys)):
+        raise TypeError(
+            "duplicate coordinates (through momentum-aliases): "
+            + ", ".join(repr(x) for x in coordinates)
+        )
+
+
 class VectorSympy(Vector):  # noqa: PLW1641
     """Mixin class for Sympy vectors."""
 
@@ -744,6 +761,8 @@ class VectorSympy2D(VectorSympy, Planar, Vector2D):
     azimuthal: AzimuthalSympy
 
     def __init__(self, azimuthal: AzimuthalSympy | None = None, **kwargs: sympy.Symbol):
+        _validate_sympy_coordinates(kwargs)
+
         for k, v in kwargs.copy().items():
             kwargs.pop(k)
             kwargs[_repr_momentum_to_generic.get(k, k)] = v
@@ -945,6 +964,8 @@ class VectorSympy3D(VectorSympy, Spatial, Vector3D):
         longitudinal: LongitudinalSympy | None = None,
         **kwargs: sympy.Symbol,
     ):
+        _validate_sympy_coordinates(kwargs)
+
         for k, v in kwargs.copy().items():
             kwargs.pop(k)
             kwargs[_repr_momentum_to_generic.get(k, k)] = v
@@ -1219,6 +1240,8 @@ class VectorSympy4D(VectorSympy, Lorentz, Vector4D):
         temporal: TemporalSympy | None = None,
         **kwargs: sympy.Symbol,
     ):
+        _validate_sympy_coordinates(kwargs)
+
         for k, v in kwargs.copy().items():
             kwargs.pop(k)
             kwargs[_repr_momentum_to_generic.get(k, k)] = v
