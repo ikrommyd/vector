@@ -15,8 +15,10 @@ from vector._methods import Momentum
 
 ak = pytest.importorskip("awkward")
 sympy = pytest.importorskip("sympy")
+numba = pytest.importorskip("numba")
 
-pytestmark = [pytest.mark.awkward, pytest.mark.sympy]
+pytestmark = [pytest.mark.awkward, pytest.mark.sympy, pytest.mark.numba]
+
 
 ALL_COORDINATES = [
     "x",
@@ -41,7 +43,7 @@ ALL_COORDINATES = [
 ]
 
 MOMENTUM_COORDINATES = {"px", "py", "pz", "pt", "E", "e", "energy", "M", "m", "mass"}
-
+AZIMUTHAL_COORDS = {"x", "y", "rho", "phi", "px", "py", "pt"}
 TEMPORAL_COORDS = {"t", "tau", "E", "e", "energy", "M", "m", "mass"}
 LONGITUDINAL_COORDS = {"z", "theta", "eta", "pz"}
 
@@ -204,6 +206,25 @@ def _get_sympy_class(coords):
         return vector.MomentumSympy4D if has_momentum else vector.VectorSympy4D
 
 
+def _numba_obj(combo):
+    """Create vector.obj inside a jitted function with the given coordinates."""
+    kwargs = ", ".join(f"{c}=1.0" for c in combo)
+    local_ns = {"vector": vector, "numba": numba}
+    exec(f"@numba.njit\ndef f():\n    return vector.obj({kwargs})", local_ns)
+    return local_ns["f"]
+
+
+def _will_numba_error(combo):
+    """Check if numba will error. Numba errors on duplicates, no valid azimuthal, or extra azimuthal coords."""
+    if _has_duplicate(combo):
+        return True
+    if not _has_valid_2_subset(combo):
+        return True
+    # Numba errors if there are more than 2 azimuthal coordinates (canonical form)
+    canonical_azimuthal = {_to_canonical(c) for c in combo if c in AZIMUTHAL_COORDS}
+    return len(canonical_azimuthal) > 2
+
+
 @pytest.mark.parametrize(
     "combo",
     ALL_2_COMBINATIONS,
@@ -214,14 +235,18 @@ def test_2_combinations(combo):
     is_momentum = _is_momentum(combo)
     error_pattern = "duplicate coordinates|unrecognized combination|must have a structured dtype|specify"
 
+    numba_error_pattern = "duplicate coordinates|unrecognized combination"
+
     if is_valid:
         v_obj = vector.obj(**dict.fromkeys(combo, 1.0))
+        v_numba = _numba_obj(combo)()
         v_numpy = vector.array({c: np.array([1.0, 2.0]) for c in combo})
         v_awkward = vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
         v_zip = vector.zip({c: np.array([1.0, 2.0]) for c in combo})
         v_sympy = _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
 
         assert isinstance(v_obj, Momentum) == is_momentum
+        assert isinstance(v_numba, Momentum) == is_momentum
         assert isinstance(v_numpy, Momentum) == is_momentum
         assert isinstance(v_awkward, Momentum) == is_momentum
         assert isinstance(v_zip, Momentum) == is_momentum
@@ -229,6 +254,9 @@ def test_2_combinations(combo):
     else:
         with pytest.raises(TypeError, match=error_pattern):
             vector.obj(**dict.fromkeys(combo, 1.0))
+
+        with pytest.raises(numba.TypingError, match=numba_error_pattern):
+            _numba_obj(combo)()
 
         with pytest.raises(TypeError, match=error_pattern):
             vector.array({c: np.array([1.0, 2.0]) for c in combo})
@@ -253,25 +281,36 @@ def test_3_combinations(combo):
     has_valid_2 = _has_valid_2_subset(combo)
     is_momentum = _is_momentum(combo)
     error_pattern = "duplicate coordinates|unrecognized combination|must have a structured dtype|specify"
+    numba_error_pattern = "duplicate coordinates|unrecognized combination"
 
     if is_valid:
         v_obj = vector.obj(**dict.fromkeys(combo, 1.0))
+        v_numba = _numba_obj(combo)()
         v_numpy = vector.array({c: np.array([1.0, 2.0]) for c in combo})
         v_awkward = vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
         v_zip = vector.zip({c: np.array([1.0, 2.0]) for c in combo})
         v_sympy = _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
 
         assert isinstance(v_obj, Momentum) == is_momentum
+        assert isinstance(v_numba, Momentum) == is_momentum
         assert isinstance(v_numpy, Momentum) == is_momentum
         assert isinstance(v_awkward, Momentum) == is_momentum
         assert isinstance(v_zip, Momentum) == is_momentum
         assert isinstance(v_sympy, Momentum) == is_momentum
     else:
+        # obj and sympy are strict - always error for invalid combos
         with pytest.raises(TypeError, match=error_pattern):
             vector.obj(**dict.fromkeys(combo, 1.0))
 
         with pytest.raises(TypeError, match=error_pattern):
             _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
+
+        # numba is permissive like numpy/awkward/zip
+        if _will_numba_error(combo):
+            with pytest.raises(numba.TypingError, match=numba_error_pattern):
+                _numba_obj(combo)()
+        else:
+            _numba_obj(combo)()
 
         if has_valid_2 and not _will_error_for_non_obj(combo):
             # numpy/awkward/zip create a 2D vector with extra fields
@@ -304,15 +343,18 @@ def test_4_combinations(combo):
     has_valid_2 = _has_valid_2_subset(combo)
     is_momentum = _is_momentum(combo)
     error_pattern = "duplicate coordinates|unrecognized combination|must have a structured dtype|specify"
+    numba_error_pattern = "duplicate coordinates|unrecognized combination"
 
     if is_valid:
         v_obj = vector.obj(**dict.fromkeys(combo, 1.0))
+        v_numba = _numba_obj(combo)()
         v_numpy = vector.array({c: np.array([1.0, 2.0]) for c in combo})
         v_awkward = vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
         v_zip = vector.zip({c: np.array([1.0, 2.0]) for c in combo})
         v_sympy = _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
 
         assert isinstance(v_obj, Momentum) == is_momentum
+        assert isinstance(v_numba, Momentum) == is_momentum
         assert isinstance(v_numpy, Momentum) == is_momentum
         assert isinstance(v_awkward, Momentum) == is_momentum
         assert isinstance(v_zip, Momentum) == is_momentum
@@ -324,6 +366,13 @@ def test_4_combinations(combo):
 
         with pytest.raises(TypeError, match=error_pattern):
             _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
+
+        # numba is permissive like numpy/awkward/zip
+        if _will_numba_error(combo):
+            with pytest.raises(numba.TypingError, match=numba_error_pattern):
+                _numba_obj(combo)()
+        else:
+            _numba_obj(combo)()
 
         if has_valid_3 and not _will_error_for_non_obj(combo):
             # numpy/awkward/zip create a 3D vector with extra fields
