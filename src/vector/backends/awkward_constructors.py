@@ -51,6 +51,7 @@ def _check_names(
     dimension = 0
     names = []
     columns = []
+    fieldnames_orig = list(fieldnames)
 
     if "x" in fieldnames and "y" in fieldnames:
         if dimension != 0:
@@ -202,17 +203,11 @@ def _check_names(
         raise TypeError(complaint1 if is_momentum else complaint2)
 
     # Check if any remaining fieldnames would conflict with already-processed coordinates
-    # or with each other when mapped to generic names (e.g., "x" and "px" both map to "x")
+    # when mapped to generic names (e.g., pt was processed, rho shouldn't remain)
     if fieldnames:
-        # Check leftovers against already-processed coordinates
-        for fname in fieldnames:
-            generic = _repr_momentum_to_generic.get(fname, fname)
-            if generic in names:
-                raise TypeError(complaint1 if is_momentum else complaint2)
-
-        # Check leftovers against each other for duplicates
-        leftover_generics = [_repr_momentum_to_generic.get(x, x) for x in fieldnames]
-        if len(leftover_generics) != len(set(leftover_generics)):
+        # Map all original fieldnames to generic names to detect conflicts
+        generic_names = [_repr_momentum_to_generic.get(x, x) for x in fieldnames_orig]
+        if len(generic_names) != len(set(generic_names)):
             raise TypeError(complaint1 if is_momentum else complaint2)
 
     for name in fieldnames:
