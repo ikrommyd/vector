@@ -3214,6 +3214,7 @@ def obj(**coordinates: float) -> VectorObject:
     generic_coordinates = {}
 
     _is_type_safe(coordinates)
+
     if "px" in coordinates:
         is_momentum = True
         generic_coordinates["x"] = coordinates.pop("px")
