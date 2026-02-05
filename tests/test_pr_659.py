@@ -5,1592 +5,350 @@
 
 from __future__ import annotations
 
+import itertools
+
 import numpy as np
 import pytest
 
 import vector
+from vector._methods import Momentum
 
 ak = pytest.importorskip("awkward")
 sympy = pytest.importorskip("sympy")
 
 pytestmark = [pytest.mark.awkward, pytest.mark.sympy]
 
-# Define sympy symbols for tests
-_x, _y = sympy.symbols("x y")
-_rho, _phi = sympy.symbols("rho phi")
-_z, _eta, _theta = sympy.symbols("z eta theta")
-_t, _tau = sympy.symbols("t tau")
-_px, _py = sympy.symbols("px py")
-_pt = sympy.symbols("pt")
-_pz = sympy.symbols("pz")
-_M, _m, _mass, _E, _e, _energy = sympy.symbols("M m mass E e energy")
-
-
-# ============================================================================
-# Duplicate temporal coordinates (t-like vs tau-like)
-# ============================================================================
-# Temporal coordinates: t, E, e, energy (all map to 't')
-#                       tau, M, m, mass (all map to 'tau')
-# These are mutually exclusive
-
-
-def test_duplicate_E_e_object():
-    """vector.obj should reject E + e"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(pt=1.0, phi=0.5, eta=1.0, E=5.0, e=5.0)
-
-
-def test_duplicate_E_e_numpy():
-    """vector.array should reject E + e"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "E": np.array([5.0, 6.0]),
-                "e": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_E_e_awkward():
-    """vector.Array should reject E + e"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "eta": np.array([1.0, 1.5]),
-                    "E": np.array([5.0, 6.0]),
-                    "e": np.array([5.0, 6.0]),
-                }
-            )
-        )
-
-
-def test_duplicate_E_e_zip():
-    """vector.zip should reject E + e"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "E": np.array([5.0, 6.0]),
-                "e": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_E_e_sympy():
-    """MomentumSympy4D should reject E + e"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, E=_E, e=_e)
-
-
-def test_duplicate_E_energy_object():
-    """vector.obj should reject E + energy"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(pt=1.0, phi=0.5, eta=1.0, E=5.0, energy=5.0)
-
-
-def test_duplicate_E_energy_numpy():
-    """vector.array should reject E + energy"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "E": np.array([5.0, 6.0]),
-                "energy": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_E_energy_awkward():
-    """vector.Array should reject E + energy"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "eta": np.array([1.0, 1.5]),
-                    "E": np.array([5.0, 6.0]),
-                    "energy": np.array([5.0, 6.0]),
-                }
-            )
-        )
-
-
-def test_duplicate_E_energy_zip():
-    """vector.zip should reject E + energy"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "E": np.array([5.0, 6.0]),
-                "energy": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_E_energy_sympy():
-    """MomentumSympy4D should reject E + energy"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, E=_E, energy=_energy)
-
-
-def test_duplicate_e_energy_object():
-    """vector.obj should reject e + energy"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(pt=1.0, phi=0.5, eta=1.0, e=5.0, energy=5.0)
-
-
-def test_duplicate_e_energy_numpy():
-    """vector.array should reject e + energy"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "e": np.array([5.0, 6.0]),
-                "energy": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_e_energy_awkward():
-    """vector.Array should reject e + energy"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "eta": np.array([1.0, 1.5]),
-                    "e": np.array([5.0, 6.0]),
-                    "energy": np.array([5.0, 6.0]),
-                }
-            )
-        )
-
-
-def test_duplicate_e_energy_zip():
-    """vector.zip should reject e + energy"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "e": np.array([5.0, 6.0]),
-                "energy": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_e_energy_sympy():
-    """MomentumSympy4D should reject e + energy"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, e=_e, energy=_energy)
-
-
-def test_duplicate_M_m_object():
-    """vector.obj should reject M + m"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(pt=1.0, phi=0.5, eta=1.0, M=0.5, m=0.5)
-
-
-def test_duplicate_M_m_numpy():
-    """vector.array should reject M + m"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "M": np.array([0.5, 0.5]),
-                "m": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_duplicate_M_m_awkward():
-    """vector.Array should reject M + m"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "eta": np.array([1.0, 1.5]),
-                    "M": np.array([0.5, 0.5]),
-                    "m": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_duplicate_M_m_zip():
-    """vector.zip should reject M + m"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "M": np.array([0.5, 0.5]),
-                "m": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_duplicate_M_m_sympy():
-    """MomentumSympy4D should reject M + m"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, M=_M, m=_m)
-
-
-def test_duplicate_M_mass_object():
-    """vector.obj should reject M + mass"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(pt=1.0, phi=0.5, eta=1.0, M=0.5, mass=0.5)
-
-
-def test_duplicate_M_mass_numpy():
-    """vector.array should reject M + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "M": np.array([0.5, 0.5]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_duplicate_M_mass_awkward():
-    """vector.Array should reject M + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "eta": np.array([1.0, 1.5]),
-                    "M": np.array([0.5, 0.5]),
-                    "mass": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_duplicate_M_mass_zip():
-    """vector.zip should reject M + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "M": np.array([0.5, 0.5]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_duplicate_M_mass_sympy():
-    """MomentumSympy4D should reject M + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, M=_M, mass=_mass)
-
-
-def test_duplicate_m_mass_object():
-    """vector.obj should reject m + mass"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(pt=1.0, phi=0.5, eta=1.0, m=0.5, mass=0.5)
-
-
-def test_duplicate_m_mass_numpy():
-    """vector.array should reject m + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "m": np.array([0.5, 0.5]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_duplicate_m_mass_awkward():
-    """vector.Array should reject m + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "eta": np.array([1.0, 1.5]),
-                    "m": np.array([0.5, 0.5]),
-                    "mass": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_duplicate_m_mass_zip():
-    """vector.zip should reject m + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "m": np.array([0.5, 0.5]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_duplicate_m_mass_sympy():
-    """MomentumSympy4D should reject m + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, m=_m, mass=_mass)
-
-
-def test_conflicting_energy_mass_object():
-    """vector.obj should reject energy + mass (t-like + tau-like)"""
-    with pytest.raises(TypeError, match="specify t= or tau=, but not more than one"):
-        vector.obj(pt=1.0, phi=0.5, eta=1.0, energy=5.0, mass=0.5)
-
-
-def test_conflicting_energy_mass_numpy():
-    """vector.array should reject energy + mass (t-like + tau-like)"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "energy": np.array([5.0, 6.0]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_energy_mass_awkward():
-    """vector.Array should reject energy + mass (t-like + tau-like)"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "eta": np.array([1.0, 1.5]),
-                    "energy": np.array([5.0, 6.0]),
-                    "mass": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_conflicting_energy_mass_zip():
-    """vector.zip should reject energy + mass (t-like + tau-like)"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "energy": np.array([5.0, 6.0]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_energy_mass_sympy():
-    """MomentumSympy4D should reject energy + mass (t-like + tau-like)"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, energy=_energy, mass=_mass)
-
-
-def test_conflicting_t_tau_object():
-    """vector.obj should reject t + tau"""
-    with pytest.raises(TypeError, match="specify t= or tau="):
-        vector.obj(x=1.0, y=2.0, z=3.0, t=5.0, tau=0.5)
-
-
-def test_conflicting_t_tau_numpy():
-    """vector.array should reject t + tau"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-                "tau": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_t_tau_awkward():
-    """vector.Array should reject t + tau"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "x": np.array([1.0, 2.0]),
-                    "y": np.array([2.0, 3.0]),
-                    "z": np.array([3.0, 4.0]),
-                    "t": np.array([5.0, 6.0]),
-                    "tau": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_conflicting_t_tau_zip():
-    """vector.zip should reject t + tau"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-                "tau": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_t_tau_sympy():
-    """VectorSympy4D should reject t + tau"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.VectorSympy4D(x=_x, y=_y, z=_z, t=_t, tau=_tau)
-
-
-def test_conflicting_E_mass_object():
-    """vector.obj should reject E + mass"""
-    with pytest.raises(TypeError, match="specify t= or tau=, but not more than one"):
-        vector.obj(pt=1.0, phi=0.5, eta=1.0, E=5.0, mass=0.5)
-
-
-def test_conflicting_E_mass_numpy():
-    """vector.array should reject E + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "E": np.array([5.0, 6.0]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_E_mass_awkward():
-    """vector.Array should reject E + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "eta": np.array([1.0, 1.5]),
-                    "E": np.array([5.0, 6.0]),
-                    "mass": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_conflicting_E_mass_zip():
-    """vector.zip should reject E + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "E": np.array([5.0, 6.0]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_E_mass_sympy():
-    """MomentumSympy4D should reject E + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, E=_E, mass=_mass)
-
-
-def test_conflicting_t_mass_object():
-    """vector.obj should reject t + mass"""
-    with pytest.raises(TypeError, match="specify t= or tau=, but not more than one"):
-        vector.obj(x=1.0, y=2.0, z=3.0, t=5.0, mass=0.5)
-
-
-def test_conflicting_t_mass_numpy():
-    """vector.array should reject t + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_t_mass_awkward():
-    """vector.Array should reject t + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "x": np.array([1.0, 2.0]),
-                    "y": np.array([2.0, 3.0]),
-                    "z": np.array([3.0, 4.0]),
-                    "t": np.array([5.0, 6.0]),
-                    "mass": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_conflicting_t_mass_zip():
-    """vector.zip should reject t + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_t_mass_sympy():
-    """MomentumSympy4D should reject t + mass"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(x=_x, y=_y, z=_z, t=_t, mass=_mass)
-
-
-def test_conflicting_energy_tau_object():
-    """vector.obj should reject energy + tau"""
-    with pytest.raises(TypeError, match="specify t= or tau=, but not more than one"):
-        vector.obj(x=1.0, y=2.0, z=3.0, energy=5.0, tau=0.5)
-
-
-def test_conflicting_energy_tau_numpy():
-    """vector.array should reject energy + tau"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "energy": np.array([5.0, 6.0]),
-                "tau": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_energy_tau_awkward():
-    """vector.Array should reject energy + tau"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "x": np.array([1.0, 2.0]),
-                    "y": np.array([2.0, 3.0]),
-                    "z": np.array([3.0, 4.0]),
-                    "energy": np.array([5.0, 6.0]),
-                    "tau": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_conflicting_energy_tau_zip():
-    """vector.zip should reject energy + tau"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "energy": np.array([5.0, 6.0]),
-                "tau": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_conflicting_energy_tau_sympy():
-    """MomentumSympy4D should reject energy + tau"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(x=_x, y=_y, z=_z, energy=_energy, tau=_tau)
-
-
-# ============================================================================
-# Duplicate azimuthal coordinates
-# ============================================================================
-# x <-> px, y <-> py, rho <-> pt
-
-
-def test_duplicate_px_x_object():
-    """vector.obj should reject px + x"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.obj(px=1.0, x=1.0, y=2.0, z=3.0, t=5.0)
-
-
-def test_duplicate_px_x_numpy():
-    """vector.array should reject px + x"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "px": np.array([1.0, 2.0]),
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_px_x_awkward():
-    """vector.Array should reject px + x"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "px": np.array([1.0, 2.0]),
-                    "x": np.array([1.0, 2.0]),
-                    "y": np.array([2.0, 3.0]),
-                    "z": np.array([3.0, 4.0]),
-                    "t": np.array([5.0, 6.0]),
-                }
-            )
-        )
-
-
-def test_duplicate_px_x_zip():
-    """vector.zip should reject px + x"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "px": np.array([1.0, 2.0]),
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_px_x_sympy():
-    """MomentumSympy4D should reject px + x"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.MomentumSympy4D(px=_px, x=_x, y=_y, z=_z, t=_t)
-
-
-def test_duplicate_py_y_object():
-    """vector.obj should reject py + y"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.obj(x=1.0, py=2.0, y=2.0, z=3.0, t=5.0)
-
-
-def test_duplicate_py_y_numpy():
-    """vector.array should reject py + y"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "x": np.array([1.0, 2.0]),
-                "py": np.array([2.0, 3.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_py_y_awkward():
-    """vector.Array should reject py + y"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "x": np.array([1.0, 2.0]),
-                    "py": np.array([2.0, 3.0]),
-                    "y": np.array([2.0, 3.0]),
-                    "z": np.array([3.0, 4.0]),
-                    "t": np.array([5.0, 6.0]),
-                }
-            )
-        )
-
-
-def test_duplicate_py_y_zip():
-    """vector.zip should reject py + y"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "x": np.array([1.0, 2.0]),
-                "py": np.array([2.0, 3.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_py_y_sympy():
-    """MomentumSympy4D should reject py + y"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.MomentumSympy4D(x=_x, py=_py, y=_y, z=_z, t=_t)
-
-
-def test_duplicate_pt_rho_object():
-    """vector.obj should reject pt + rho"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.obj(pt=1.0, rho=1.0, phi=0.5, eta=1.0, mass=0.5)
-
-
-def test_duplicate_pt_rho_numpy():
-    """vector.array should reject pt + rho"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "rho": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_duplicate_pt_rho_awkward():
-    """vector.Array should reject pt + rho"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "rho": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "eta": np.array([1.0, 1.5]),
-                    "mass": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_duplicate_pt_rho_zip():
-    """vector.zip should reject pt + rho"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "rho": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_duplicate_pt_rho_sympy():
-    """MomentumSympy4D should reject pt + rho"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, rho=_rho, phi=_phi, eta=_eta, mass=_mass)
-
-
-# ============================================================================
-# Duplicate longitudinal coordinates
-# ============================================================================
-# z <-> pz
-
-
-def test_duplicate_pz_z_object():
-    """vector.obj should reject pz + z"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.obj(x=1.0, y=2.0, pz=3.0, z=3.0, t=5.0)
-
-
-def test_duplicate_pz_z_numpy():
-    """vector.array should reject pz + z"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "pz": np.array([3.0, 4.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_pz_z_awkward():
-    """vector.Array should reject pz + z"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "x": np.array([1.0, 2.0]),
-                    "y": np.array([2.0, 3.0]),
-                    "pz": np.array([3.0, 4.0]),
-                    "z": np.array([3.0, 4.0]),
-                    "t": np.array([5.0, 6.0]),
-                }
-            )
-        )
-
-
-def test_duplicate_pz_z_zip():
-    """vector.zip should reject pz + z"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "pz": np.array([3.0, 4.0]),
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_duplicate_pz_z_sympy():
-    """MomentumSympy4D should reject pz + z"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(x=_x, y=_y, pz=_pz, z=_z, t=_t)
-
-
-# ============================================================================
-# Mixed azimuthal coordinate systems (from _gather_coordinates)
-# ============================================================================
-
-
-def test_mixed_xy_with_rho_object():
-    """vector.obj should reject x+y with rho"""
-    with pytest.raises(TypeError, match="specify x= and y= or rho= and phi="):
-        vector.obj(x=1.0, y=2.0, rho=1.0, z=3.0)
-
-
-def test_mixed_xy_with_phi_object():
-    """vector.obj should reject x+y with phi"""
-    with pytest.raises(TypeError, match="specify x= and y= or rho= and phi="):
-        vector.obj(x=1.0, y=2.0, phi=0.5, z=3.0)
-
-
-def test_mixed_rhophi_with_x_object():
-    """vector.obj should reject rho+phi with x"""
-    with pytest.raises(TypeError, match="specify x= and y= or rho= and phi="):
-        vector.obj(rho=1.0, phi=0.5, x=1.0, z=3.0)
-
-
-def test_mixed_rhophi_with_y_object():
-    """vector.obj should reject rho+phi with y"""
-    with pytest.raises(TypeError, match="specify x= and y= or rho= and phi="):
-        vector.obj(rho=1.0, phi=0.5, y=2.0, z=3.0)
-
-
-# ============================================================================
-# Mixed longitudinal coordinates (from _gather_coordinates)
-# ============================================================================
-
-
-def test_mixed_z_theta_object():
-    """vector.obj should reject z with theta"""
-    with pytest.raises(TypeError, match="specify z= or theta= or eta="):
-        vector.obj(x=1.0, y=2.0, z=3.0, theta=1.0)
-
-
-def test_mixed_z_eta_object():
-    """vector.obj should reject z with eta"""
-    with pytest.raises(TypeError, match="specify z= or theta= or eta="):
-        vector.obj(x=1.0, y=2.0, z=3.0, eta=1.0)
-
-
-def test_mixed_theta_eta_object():
-    """vector.obj should reject theta with eta"""
-    with pytest.raises(TypeError, match="specify z= or theta= or eta="):
-        vector.obj(x=1.0, y=2.0, theta=1.0, eta=1.0)
-
-
-# ============================================================================
-# Valid combinations (ensure validation doesn't reject valid inputs)
-# ============================================================================
-
-
-def test_valid_pt_phi_eta_mass_object():
-    """vector.obj should accept pt, phi, eta, mass"""
-    vec = vector.obj(pt=1.0, phi=0.5, eta=1.0, mass=0.5)
-    assert vec.pt == 1.0
-    assert vec.phi == 0.5
-    assert vec.eta == 1.0
-    assert vec.mass == 0.5
-
-
-def test_valid_pt_phi_eta_mass_numpy():
-    """vector.array should accept pt, phi, eta, mass"""
-    arr = vector.array(
-        {
-            "pt": np.array([1.0, 2.0]),
-            "phi": np.array([0.5, 1.0]),
-            "eta": np.array([1.0, 1.5]),
-            "mass": np.array([0.5, 0.5]),
-        }
+ALL_COORDINATES = [
+    "x",
+    "y",
+    "rho",
+    "phi",
+    "px",
+    "py",
+    "pt",
+    "z",
+    "theta",
+    "eta",
+    "pz",
+    "t",
+    "tau",
+    "E",
+    "e",
+    "energy",
+    "M",
+    "m",
+    "mass",
+]
+
+MOMENTUM_COORDINATES = {"px", "py", "pz", "pt", "E", "e", "energy", "M", "m", "mass"}
+
+TEMPORAL_COORDS = {"t", "tau", "E", "e", "energy", "M", "m", "mass"}
+LONGITUDINAL_COORDS = {"z", "theta", "eta", "pz"}
+
+COORD_ALIASES = {
+    "px": "x",
+    "py": "y",
+    "pz": "z",
+    "pt": "rho",
+    "E": "t",
+    "e": "t",
+    "energy": "t",
+    "M": "tau",
+    "m": "tau",
+    "mass": "tau",
+}
+
+VALID_2_COMBINATIONS = [
+    {"x", "y"},
+    {"rho", "phi"},
+    {"px", "py"},
+    {"pt", "phi"},
+    {"x", "py"},
+    {"px", "y"},
+]
+
+ALL_2_COMBINATIONS = list(itertools.combinations(ALL_COORDINATES, 2))
+
+VALID_3_COMBINATIONS = [
+    az | {lon} for az in VALID_2_COMBINATIONS for lon in ("z", "theta", "eta", "pz")
+]
+
+ALL_3_COMBINATIONS = list(itertools.combinations(ALL_COORDINATES, 3))
+
+VALID_4_COMBINATIONS = [
+    az | {lon} | {temp}
+    for az in VALID_2_COMBINATIONS
+    for lon in ("z", "theta", "eta", "pz")
+    for temp in ("t", "tau", "E", "e", "energy", "M", "m", "mass")
+]
+
+ALL_4_COMBINATIONS = list(itertools.combinations(ALL_COORDINATES, 4))
+
+
+def _is_valid_2(combo):
+    return set(combo) in VALID_2_COMBINATIONS
+
+
+def _is_valid_3(combo):
+    return set(combo) in VALID_3_COMBINATIONS
+
+
+def _is_valid_4(combo):
+    return set(combo) in VALID_4_COMBINATIONS
+
+
+def _has_valid_3_subset(combo):
+    for triple in itertools.combinations(combo, 3):
+        if set(triple) in VALID_3_COMBINATIONS:
+            return True
+    return False
+
+
+def _has_valid_2_subset(combo):
+    for pair in itertools.combinations(combo, 2):
+        if set(pair) in VALID_2_COMBINATIONS:
+            return True
+    return False
+
+
+def _is_momentum(combo):
+    return any(c in MOMENTUM_COORDINATES for c in combo)
+
+
+def _to_canonical(coord):
+    return COORD_ALIASES.get(coord, coord)
+
+
+def _has_duplicate(combo):
+    canonicals = [_to_canonical(c) for c in combo]
+    return len(canonicals) != len(set(canonicals))
+
+
+def _will_error_for_non_obj(combo):
+    """Check if combo with valid subset will error for non-obj backends."""
+    # Check for canonical duplicates (e.g., x and px both map to x)
+    if _has_duplicate(combo):
+        return True
+
+    # Temporal without longitudinal
+    has_temporal = any(c in TEMPORAL_COORDS for c in combo)
+    has_longitudinal = any(c in LONGITUDINAL_COORDS for c in combo)
+    if has_temporal and not has_longitudinal:
+        return True
+
+    # Multiple longitudinal coords (z, theta, eta, pz) - only one allowed
+    longitudinal_count = sum(1 for c in combo if c in LONGITUDINAL_COORDS)
+    if longitudinal_count > 1:
+        return True
+
+    # Multiple temporal coords - only one allowed
+    temporal_count = sum(1 for c in combo if c in TEMPORAL_COORDS)
+    if temporal_count > 1:
+        return True
+
+    # Multiple azimuthal pairs (e.g., x,y and rho,phi both present)
+    valid_2_count = sum(
+        1
+        for pair in itertools.combinations(combo, 2)
+        if set(pair) in VALID_2_COMBINATIONS
     )
-    assert np.allclose(arr.pt, [1.0, 2.0])
-    assert np.allclose(arr.phi, [0.5, 1.0])
-    assert np.allclose(arr.eta, [1.0, 1.5])
-    assert np.allclose(arr.mass, [0.5, 0.5])
-
-
-def test_valid_pt_phi_eta_mass_awkward():
-    """vector.Array should accept pt, phi, eta, mass"""
-    arr = vector.Array(
-        ak.Array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "eta": np.array([1.0, 1.5]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-    )
-    assert ak.all(arr.pt == ak.Array([1.0, 2.0]))
-    assert ak.all(arr.phi == ak.Array([0.5, 1.0]))
-    assert ak.all(arr.eta == ak.Array([1.0, 1.5]))
-    assert ak.all(arr.mass == ak.Array([0.5, 0.5]))
-
-
-def test_valid_pt_phi_eta_mass_zip():
-    """vector.zip should accept pt, phi, eta, mass"""
-    arr = vector.zip(
-        {
-            "pt": np.array([1.0, 2.0]),
-            "phi": np.array([0.5, 1.0]),
-            "eta": np.array([1.0, 1.5]),
-            "mass": np.array([0.5, 0.5]),
-        }
-    )
-    assert ak.all(arr.pt == ak.Array([1.0, 2.0]))
-    assert ak.all(arr.phi == ak.Array([0.5, 1.0]))
-    assert ak.all(arr.eta == ak.Array([1.0, 1.5]))
-    assert ak.all(arr.mass == ak.Array([0.5, 0.5]))
-
-
-def test_valid_pt_phi_eta_mass_sympy():
-    """MomentumSympy4D should accept pt, phi, eta, mass"""
-    vec = vector.MomentumSympy4D(pt=_pt, phi=_phi, eta=_eta, mass=_mass)
-    assert vec.pt == _pt
-    assert vec.phi == _phi
-    assert vec.eta == _eta
-    assert vec.mass == _mass
-
-
-def test_valid_x_y_z_energy_object():
-    """vector.obj should accept x, y, z, energy"""
-    vec = vector.obj(x=1.0, y=2.0, z=3.0, energy=5.0)
-    assert vec.x == 1.0
-    assert vec.y == 2.0
-    assert vec.z == 3.0
-    assert vec.energy == 5.0
-
-
-def test_valid_x_y_z_energy_numpy():
-    """vector.array should accept x, y, z, energy"""
-    arr = vector.array(
-        {
-            "x": np.array([1.0, 2.0]),
-            "y": np.array([2.0, 3.0]),
-            "z": np.array([3.0, 4.0]),
-            "energy": np.array([5.0, 6.0]),
-        }
-    )
-    assert np.allclose(arr.x, [1.0, 2.0])
-    assert np.allclose(arr.y, [2.0, 3.0])
-    assert np.allclose(arr.z, [3.0, 4.0])
-    assert np.allclose(arr.energy, [5.0, 6.0])
-
-
-def test_valid_x_y_z_energy_awkward():
-    """vector.Array should accept x, y, z, energy"""
-    arr = vector.Array(
-        ak.Array(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "z": np.array([3.0, 4.0]),
-                "energy": np.array([5.0, 6.0]),
-            }
-        )
-    )
-    assert ak.all(arr.x == ak.Array([1.0, 2.0]))
-    assert ak.all(arr.y == ak.Array([2.0, 3.0]))
-    assert ak.all(arr.z == ak.Array([3.0, 4.0]))
-    assert ak.all(arr.energy == ak.Array([5.0, 6.0]))
-
-
-def test_valid_x_y_z_energy_zip():
-    """vector.zip should accept x, y, z, energy"""
-    arr = vector.zip(
-        {
-            "x": np.array([1.0, 2.0]),
-            "y": np.array([2.0, 3.0]),
-            "z": np.array([3.0, 4.0]),
-            "energy": np.array([5.0, 6.0]),
-        }
-    )
-    assert ak.all(arr.x == ak.Array([1.0, 2.0]))
-    assert ak.all(arr.y == ak.Array([2.0, 3.0]))
-    assert ak.all(arr.z == ak.Array([3.0, 4.0]))
-    assert ak.all(arr.energy == ak.Array([5.0, 6.0]))
-
-
-def test_valid_x_y_z_energy_sympy():
-    """MomentumSympy4D should accept x, y, z, energy"""
-    vec = vector.MomentumSympy4D(x=_x, y=_y, z=_z, energy=_energy)
-    assert vec.x == _x
-    assert vec.y == _y
-    assert vec.z == _z
-    assert vec.energy == _energy
-
-
-def test_valid_px_py_pz_E_object():
-    """vector.obj should accept px, py, pz, E"""
-    vec = vector.obj(px=1.0, py=2.0, pz=3.0, E=5.0)
-    assert vec.px == 1.0
-    assert vec.py == 2.0
-    assert vec.pz == 3.0
-    assert vec.E == 5.0
-
-
-def test_valid_px_py_pz_E_numpy():
-    """vector.array should accept px, py, pz, E"""
-    arr = vector.array(
-        {
-            "px": np.array([1.0, 2.0]),
-            "py": np.array([2.0, 3.0]),
-            "pz": np.array([3.0, 4.0]),
-            "E": np.array([5.0, 6.0]),
-        }
-    )
-    assert np.allclose(arr.px, [1.0, 2.0])
-    assert np.allclose(arr.py, [2.0, 3.0])
-    assert np.allclose(arr.pz, [3.0, 4.0])
-    assert np.allclose(arr.E, [5.0, 6.0])
-
-
-def test_valid_px_py_pz_E_awkward():
-    """vector.Array should accept px, py, pz, E"""
-    arr = vector.Array(
-        ak.Array(
-            {
-                "px": np.array([1.0, 2.0]),
-                "py": np.array([2.0, 3.0]),
-                "pz": np.array([3.0, 4.0]),
-                "E": np.array([5.0, 6.0]),
-            }
-        )
-    )
-    assert ak.all(arr.px == ak.Array([1.0, 2.0]))
-    assert ak.all(arr.py == ak.Array([2.0, 3.0]))
-    assert ak.all(arr.pz == ak.Array([3.0, 4.0]))
-    assert ak.all(ak.Array([5.0, 6.0]) == arr.E)
-
-
-def test_valid_px_py_pz_E_zip():
-    """vector.zip should accept px, py, pz, E"""
-    arr = vector.zip(
-        {
-            "px": np.array([1.0, 2.0]),
-            "py": np.array([2.0, 3.0]),
-            "pz": np.array([3.0, 4.0]),
-            "E": np.array([5.0, 6.0]),
-        }
-    )
-    assert ak.all(arr.px == ak.Array([1.0, 2.0]))
-    assert ak.all(arr.py == ak.Array([2.0, 3.0]))
-    assert ak.all(arr.pz == ak.Array([3.0, 4.0]))
-    assert ak.all(ak.Array([5.0, 6.0]) == arr.E)
-
-
-def test_valid_px_py_pz_E_sympy():
-    """MomentumSympy4D should accept px, py, pz, E"""
-    vec = vector.MomentumSympy4D(px=_px, py=_py, pz=_pz, E=_E)
-    assert vec.px == _px
-    assert vec.py == _py
-    assert vec.pz == _pz
-    assert vec.E == _E
-
-
-# ============================================================================
-# Incomplete azimuthal coordinate pairs
-# ============================================================================
-
-
-def test_incomplete_x_without_y_object():
-    """vector.obj should reject x without y"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(x=1.0, z=3.0)
-
-
-def test_incomplete_x_without_y_numpy():
-    """vector.array should reject x without y"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "x": np.array([1.0, 2.0]),
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_incomplete_x_without_y_awkward():
-    """vector.Array should reject x without y"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "x": np.array([1.0, 2.0]),
-                    "z": np.array([3.0, 4.0]),
-                }
-            )
-        )
-
-
-def test_incomplete_x_without_y_zip():
-    """vector.zip should reject x without y"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "x": np.array([1.0, 2.0]),
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_incomplete_x_without_y_sympy():
-    """VectorSympy3D should reject x without y"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.VectorSympy3D(x=_x, z=_z)
-
-
-def test_incomplete_rho_without_phi_object():
-    """vector.obj should reject rho without phi"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(rho=1.0, z=3.0)
-
-
-def test_incomplete_rho_without_phi_numpy():
-    """vector.array should reject rho without phi"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "rho": np.array([1.0, 2.0]),
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_incomplete_rho_without_phi_awkward():
-    """vector.Array should reject rho without phi"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "rho": np.array([1.0, 2.0]),
-                    "z": np.array([3.0, 4.0]),
-                }
-            )
-        )
-
-
-def test_incomplete_rho_without_phi_zip():
-    """vector.zip should reject rho without phi"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "rho": np.array([1.0, 2.0]),
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_incomplete_rho_without_phi_sympy():
-    """VectorSympy3D should reject rho without phi"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.VectorSympy3D(rho=_rho, z=_z)
-
-
-# ============================================================================
-# Mixed azimuthal coordinate components
-# ============================================================================
-
-
-def test_mixed_x_phi_object():
-    """vector.obj should reject x with phi (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(x=1.0, phi=0.5, z=3.0)
-
-
-def test_mixed_x_phi_numpy():
-    """vector.array should reject x with phi (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "x": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_mixed_x_phi_awkward():
-    """vector.Array should reject x with phi (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "x": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "z": np.array([3.0, 4.0]),
-                }
-            )
-        )
-
-
-def test_mixed_x_phi_zip():
-    """vector.zip should reject x with phi (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "x": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_mixed_x_phi_sympy():
-    """VectorSympy3D should reject x with phi (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.VectorSympy3D(x=_x, phi=_phi, z=_z)
-
-
-def test_mixed_y_rho_object():
-    """vector.obj should reject y with rho (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(y=2.0, rho=1.0, z=3.0)
-
-
-def test_mixed_y_rho_numpy():
-    """vector.array should reject y with rho (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "y": np.array([2.0, 3.0]),
-                "rho": np.array([1.0, 2.0]),
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_mixed_y_rho_awkward():
-    """vector.Array should reject y with rho (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "y": np.array([2.0, 3.0]),
-                    "rho": np.array([1.0, 2.0]),
-                    "z": np.array([3.0, 4.0]),
-                }
-            )
-        )
-
-
-def test_mixed_y_rho_zip():
-    """vector.zip should reject y with rho (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "y": np.array([2.0, 3.0]),
-                "rho": np.array([1.0, 2.0]),
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_mixed_y_rho_sympy():
-    """VectorSympy3D should reject y with rho (mixed systems)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.VectorSympy3D(y=_y, rho=_rho, z=_z)
-
-
-# ============================================================================
-# Temporal without proper 3D base
-# ============================================================================
-
-
-def test_temporal_without_longitudinal_object():
-    """vector.obj should reject x+y+t (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(x=1.0, y=2.0, t=5.0)
-
-
-def test_temporal_without_longitudinal_numpy():
-    """vector.array should reject x+y+t (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_temporal_without_longitudinal_awkward():
-    """vector.Array should reject x+y+t (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "x": np.array([1.0, 2.0]),
-                    "y": np.array([2.0, 3.0]),
-                    "t": np.array([5.0, 6.0]),
-                }
-            )
-        )
-
-
-def test_temporal_without_longitudinal_zip():
-    """vector.zip should reject x+y+t (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "x": np.array([1.0, 2.0]),
-                "y": np.array([2.0, 3.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_temporal_without_longitudinal_sympy():
-    """VectorSympy4D should reject x+y+t (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.VectorSympy4D(x=_x, y=_y, t=_t)
-
-
-def test_mass_without_longitudinal_object():
-    """vector.obj should reject pt+phi+mass (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(pt=1.0, phi=0.5, mass=0.5)
-
-
-def test_mass_without_longitudinal_numpy():
-    """vector.array should reject pt+phi+mass (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.array(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_mass_without_longitudinal_awkward():
-    """vector.Array should reject pt+phi+mass (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.Array(
-            ak.Array(
-                {
-                    "pt": np.array([1.0, 2.0]),
-                    "phi": np.array([0.5, 1.0]),
-                    "mass": np.array([0.5, 0.5]),
-                }
-            )
-        )
-
-
-def test_mass_without_longitudinal_zip():
-    """vector.zip should reject pt+phi+mass (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.zip(
-            {
-                "pt": np.array([1.0, 2.0]),
-                "phi": np.array([0.5, 1.0]),
-                "mass": np.array([0.5, 0.5]),
-            }
-        )
-
-
-def test_mass_without_longitudinal_sympy():
-    """MomentumSympy4D should reject pt+phi+mass (temporal without longitudinal)"""
-    with pytest.raises(TypeError, match="duplicate coordinates"):
-        vector.MomentumSympy4D(pt=_pt, phi=_phi, mass=_mass)
-
-
-# ============================================================================
-# Missing required coordinates
-# ============================================================================
-
-
-def test_only_temporal_object():
-    """vector.obj should reject only t (missing spatial coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(t=5.0)
-
-
-def test_only_temporal_numpy():
-    """vector.array should reject only t (missing spatial coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_only_temporal_awkward():
-    """vector.Array should reject only t (missing spatial coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "t": np.array([5.0, 6.0]),
-                }
-            )
-        )
-
-
-def test_only_temporal_zip():
-    """vector.zip should reject only t (missing spatial coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_only_temporal_sympy():
-    """VectorSympy4D should reject only t (missing spatial coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.VectorSympy4D(t=_t)
-
-
-def test_only_longitudinal_object():
-    """vector.obj should reject only z (missing azimuthal coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(z=3.0)
-
-
-def test_only_longitudinal_numpy():
-    """vector.array should reject only z (missing azimuthal coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_only_longitudinal_awkward():
-    """vector.Array should reject only z (missing azimuthal coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "z": np.array([3.0, 4.0]),
-                }
-            )
-        )
-
-
-def test_only_longitudinal_zip():
-    """vector.zip should reject only z (missing azimuthal coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "z": np.array([3.0, 4.0]),
-            }
-        )
-
-
-def test_only_longitudinal_sympy():
-    """VectorSympy3D should reject only z (missing azimuthal coords)"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.VectorSympy3D(z=_z)
-
-
-def test_longitudinal_temporal_without_azimuthal_object():
-    """vector.obj should reject z+t without azimuthal coords"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.obj(z=3.0, t=5.0)
-
-
-def test_longitudinal_temporal_without_azimuthal_numpy():
-    """vector.array should reject z+t without azimuthal coords"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.array(
-            {
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_longitudinal_temporal_without_azimuthal_awkward():
-    """vector.Array should reject z+t without azimuthal coords"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.Array(
-            ak.Array(
-                {
-                    "z": np.array([3.0, 4.0]),
-                    "t": np.array([5.0, 6.0]),
-                }
-            )
-        )
-
-
-def test_longitudinal_temporal_without_azimuthal_zip():
-    """vector.zip should reject z+t without azimuthal coords"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.zip(
-            {
-                "z": np.array([3.0, 4.0]),
-                "t": np.array([5.0, 6.0]),
-            }
-        )
-
-
-def test_longitudinal_temporal_without_azimuthal_sympy():
-    """VectorSympy4D should reject z+t without azimuthal coords"""
-    with pytest.raises(TypeError, match="unrecognized combination"):
-        vector.VectorSympy4D(z=_z, t=_t)
+    return valid_2_count > 1
+
+
+def _get_first_valid_2_subset(combo):
+    """Get the first valid 2-subset from a combo."""
+    for pair in itertools.combinations(combo, 2):
+        if set(pair) in VALID_2_COMBINATIONS:
+            return set(pair)
+    return None
+
+
+def _get_first_valid_3_subset(combo):
+    """Get the first valid 3-subset from a combo."""
+    for triple in itertools.combinations(combo, 3):
+        if set(triple) in VALID_3_COMBINATIONS:
+            return set(triple)
+    return None
+
+
+def _is_momentum_numpy(combo):
+    """Numpy checks if ANY field name is a momentum coordinate."""
+    return any(c in MOMENTUM_COORDINATES for c in combo)
+
+
+def _is_momentum_awkward(combo):
+    """Awkward only sets is_momentum when momentum coords are consumed as vector coords."""
+    # Check for valid 4-subset first
+    for quad in itertools.combinations(combo, 4):
+        if set(quad) in VALID_4_COMBINATIONS:
+            return _is_momentum(quad)
+    # Check for valid 3-subset
+    valid_3 = _get_first_valid_3_subset(combo)
+    if valid_3 is not None:
+        return _is_momentum(valid_3)
+    # Check for valid 2-subset
+    valid_2 = _get_first_valid_2_subset(combo)
+    if valid_2 is not None:
+        return _is_momentum(valid_2)
+    return False
+
+
+def _get_sympy_class(coords):
+    has_momentum = _is_momentum(coords)
+    n = len(coords)
+    if n <= 2:
+        return vector.MomentumSympy2D if has_momentum else vector.VectorSympy2D
+    elif n == 3:
+        return vector.MomentumSympy3D if has_momentum else vector.VectorSympy3D
+    else:
+        return vector.MomentumSympy4D if has_momentum else vector.VectorSympy4D
+
+
+@pytest.mark.parametrize(
+    "combo",
+    ALL_2_COMBINATIONS,
+    ids=[f"{a}_{b}" for a, b in ALL_2_COMBINATIONS],
+)
+def test_2_combinations(combo):
+    is_valid = _is_valid_2(combo)
+    is_momentum = _is_momentum(combo)
+    error_pattern = "duplicate coordinates|unrecognized combination|must have a structured dtype|specify"
+
+    if is_valid:
+        v_obj = vector.obj(**dict.fromkeys(combo, 1.0))
+        v_numpy = vector.array({c: np.array([1.0, 2.0]) for c in combo})
+        v_awkward = vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
+        v_zip = vector.zip({c: np.array([1.0, 2.0]) for c in combo})
+        v_sympy = _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
+
+        assert isinstance(v_obj, Momentum) == is_momentum
+        assert isinstance(v_numpy, Momentum) == is_momentum
+        assert isinstance(v_awkward, Momentum) == is_momentum
+        assert isinstance(v_zip, Momentum) == is_momentum
+        assert isinstance(v_sympy, Momentum) == is_momentum
+    else:
+        with pytest.raises(TypeError, match=error_pattern):
+            vector.obj(**dict.fromkeys(combo, 1.0))
+
+        with pytest.raises(TypeError, match=error_pattern):
+            vector.array({c: np.array([1.0, 2.0]) for c in combo})
+
+        with pytest.raises(TypeError, match=error_pattern):
+            vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
+
+        with pytest.raises(TypeError, match=error_pattern):
+            vector.zip({c: np.array([1.0, 2.0]) for c in combo})
+
+        with pytest.raises(TypeError, match=error_pattern):
+            _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
+
+
+@pytest.mark.parametrize(
+    "combo",
+    ALL_3_COMBINATIONS,
+    ids=[f"{a}_{b}_{c}" for a, b, c in ALL_3_COMBINATIONS],
+)
+def test_3_combinations(combo):
+    is_valid = _is_valid_3(combo)
+    has_valid_2 = _has_valid_2_subset(combo)
+    is_momentum = _is_momentum(combo)
+    error_pattern = "duplicate coordinates|unrecognized combination|must have a structured dtype|specify"
+
+    if is_valid:
+        v_obj = vector.obj(**dict.fromkeys(combo, 1.0))
+        v_numpy = vector.array({c: np.array([1.0, 2.0]) for c in combo})
+        v_awkward = vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
+        v_zip = vector.zip({c: np.array([1.0, 2.0]) for c in combo})
+        v_sympy = _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
+
+        assert isinstance(v_obj, Momentum) == is_momentum
+        assert isinstance(v_numpy, Momentum) == is_momentum
+        assert isinstance(v_awkward, Momentum) == is_momentum
+        assert isinstance(v_zip, Momentum) == is_momentum
+        assert isinstance(v_sympy, Momentum) == is_momentum
+    else:
+        with pytest.raises(TypeError, match=error_pattern):
+            vector.obj(**dict.fromkeys(combo, 1.0))
+
+        with pytest.raises(TypeError, match=error_pattern):
+            _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
+
+        if has_valid_2 and not _will_error_for_non_obj(combo):
+            # numpy/awkward/zip create a 2D vector with extra fields
+            v_numpy = vector.array({c: np.array([1.0, 2.0]) for c in combo})
+            v_awkward = vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
+            v_zip = vector.zip({c: np.array([1.0, 2.0]) for c in combo})
+
+            assert isinstance(v_numpy, Momentum) == _is_momentum_numpy(combo)
+            assert isinstance(v_awkward, Momentum) == _is_momentum_awkward(combo)
+            assert isinstance(v_zip, Momentum) == _is_momentum_awkward(combo)
+        else:
+            with pytest.raises(TypeError, match=error_pattern):
+                vector.array({c: np.array([1.0, 2.0]) for c in combo})
+
+            with pytest.raises(TypeError, match=error_pattern):
+                vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
+
+            with pytest.raises(TypeError, match=error_pattern):
+                vector.zip({c: np.array([1.0, 2.0]) for c in combo})
+
+
+@pytest.mark.parametrize(
+    "combo",
+    ALL_4_COMBINATIONS,
+    ids=[f"{a}_{b}_{c}_{d}" for a, b, c, d in ALL_4_COMBINATIONS],
+)
+def test_4_combinations(combo):
+    is_valid = _is_valid_4(combo)
+    has_valid_3 = _has_valid_3_subset(combo)
+    has_valid_2 = _has_valid_2_subset(combo)
+    is_momentum = _is_momentum(combo)
+    error_pattern = "duplicate coordinates|unrecognized combination|must have a structured dtype|specify"
+
+    if is_valid:
+        v_obj = vector.obj(**dict.fromkeys(combo, 1.0))
+        v_numpy = vector.array({c: np.array([1.0, 2.0]) for c in combo})
+        v_awkward = vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
+        v_zip = vector.zip({c: np.array([1.0, 2.0]) for c in combo})
+        v_sympy = _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
+
+        assert isinstance(v_obj, Momentum) == is_momentum
+        assert isinstance(v_numpy, Momentum) == is_momentum
+        assert isinstance(v_awkward, Momentum) == is_momentum
+        assert isinstance(v_zip, Momentum) == is_momentum
+        assert isinstance(v_sympy, Momentum) == is_momentum
+    else:
+        # obj and sympy are strict - always error for invalid combos
+        with pytest.raises(TypeError, match=error_pattern):
+            vector.obj(**dict.fromkeys(combo, 1.0))
+
+        with pytest.raises(TypeError, match=error_pattern):
+            _get_sympy_class(combo)(**{c: sympy.Symbol(c) for c in combo})
+
+        if has_valid_3 and not _will_error_for_non_obj(combo):
+            # numpy/awkward/zip create a 3D vector with extra fields
+            v_numpy = vector.array({c: np.array([1.0, 2.0]) for c in combo})
+            v_awkward = vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
+            v_zip = vector.zip({c: np.array([1.0, 2.0]) for c in combo})
+
+            assert isinstance(v_numpy, Momentum) == _is_momentum_numpy(combo)
+            assert isinstance(v_awkward, Momentum) == _is_momentum_awkward(combo)
+            assert isinstance(v_zip, Momentum) == _is_momentum_awkward(combo)
+        elif has_valid_2 and not _will_error_for_non_obj(combo):
+            # numpy/awkward/zip create a 2D vector with extra fields
+            v_numpy = vector.array({c: np.array([1.0, 2.0]) for c in combo})
+            v_awkward = vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
+            v_zip = vector.zip({c: np.array([1.0, 2.0]) for c in combo})
+
+            assert isinstance(v_numpy, Momentum) == _is_momentum_numpy(combo)
+            assert isinstance(v_awkward, Momentum) == _is_momentum_awkward(combo)
+            assert isinstance(v_zip, Momentum) == _is_momentum_awkward(combo)
+        else:
+            with pytest.raises(TypeError, match=error_pattern):
+                vector.array({c: np.array([1.0, 2.0]) for c in combo})
+
+            with pytest.raises(TypeError, match=error_pattern):
+                vector.Array(ak.Array({c: [1.0, 2.0] for c in combo}))
+
+            with pytest.raises(TypeError, match=error_pattern):
+                vector.zip({c: np.array([1.0, 2.0]) for c in combo})
